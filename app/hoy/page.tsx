@@ -27,9 +27,13 @@ export default function HoyPage() {
   useEffect(() => { cargar(); }, []);
 
   async function checkin(id: string) {
-    await supabase.from('agenda').update({ estado: 'en_espera' }).eq('id', id);
-    cargar();
+  const { error } = await supabase.from('agenda').update({ estado: 'en_espera' }).eq('id', id);
+  if (error) {
+    alert('Error Supabase: ' + error.message);
+    console.log(error);
   }
+  cargar();
+}
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 20 }}>
