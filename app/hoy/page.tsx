@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '../supabase';
 
 const ESTADOS: any = {
@@ -50,14 +51,19 @@ export default function HoyPage() {
           <div key={c.id} style={{ background: 'white', padding: 16, borderRadius: 18, border: `2px solid ${cfg.color}`, marginBottom: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 800 }}>{c.pacientes?.nombre} - {c.pacientes?.especie}</div>
+                <div style={{ fontWeight: 800 }}>
+                  <Link href={`/pacientes/${c.paciente_id}`} style={{ color: 'black', textDecoration: 'underline' }}>
+                    {c.pacientes?.nombre} - {c.pacientes?.especie}
+                  </Link>
+                </div>
                 <div style={{ fontSize: 13, color: '#6b7280' }}>{c.tutores?.nombre_completo} | {c.estado} {c.motivo_cancelacion ? `| Motivo: ${c.motivo_cancelacion}` : ''}</div>
               </div>
               {cfg.next && <button onClick={() => cambiar(c.id, cfg.next!)} style={{ background: cfg.color, color: 'white', padding: '10px 18px', borderRadius: 999, border: 0, fontWeight: 800 }}>{cfg.label}</button>}
               {!cfg.next && c.estado !== 'cancelada' && <span style={{ background: cfg.color, color: 'white', padding: '10px 18px', borderRadius: 999, fontWeight: 800 }}>{cfg.label}</span>}
               {c.estado === 'cancelada' && <span style={{ background: cfg.color, color: 'white', padding: '10px 18px', borderRadius: 999, fontWeight: 800 }}>Cancelada</span>}
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <Link href={`/pacientes/${c.paciente_id}`} style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#111827', padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>📋 Ver ficha</Link>
               {prevCfg && <button onClick={() => cambiar(c.id, cfg.prev!)} style={{ background: 'white', border: `1px solid ${prevCfg.color}`, color: prevCfg.color, padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>↩ Volver a {prevCfg.label}</button>}
               {c.estado === 'cancelada' && <button onClick={() => cambiar(c.id, 'agendada')} style={{ background: '#111827', color: 'white', padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>↩ Reactivar cita</button>}
               {c.estado !== 'cancelada' && c.estado !== 'atendida' && <button onClick={() => cancelar(c)} style={{ marginLeft: 'auto', background: 'white', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>✕ Cancelar</button>}
