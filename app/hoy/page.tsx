@@ -25,10 +25,14 @@ export default function HoyPage() {
   }
   useEffect(() => { cargar(); }, []);
 
-  async function avanzar(cita: any) {
+    async function avanzar(cita: any) {
     const cfg = estados[cita.estado];
     if (!cfg || !cfg.next) return;
-    await supabase.from('agenda').update({ estado: cfg.next }).eq('id', cita.id);
+    const { error } = await supabase.from('agenda').update({ estado: cfg.next }).eq('id', cita.id);
+    if (error) {
+      alert('No deja cambiar a ' + cfg.next + ': ' + error.message);
+      return;
+    }
     cargar();
   }
 
