@@ -1,12 +1,12 @@
 import './globals.css'
-import ChatVet from './components/ChatVet' // <- 1. importa
+import ChatVet from './components/ChatVet'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body>
+      <body style={{margin:0, fontFamily:'system-ui'}}>
         {children}
-        <ChatVet /> {/* <- 2. ponlo aquí al final, no tapa nada porque está cerrado por defecto */}
+        <ChatVet />
       </body>
     </html>
   )
