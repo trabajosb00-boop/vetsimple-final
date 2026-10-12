@@ -24,9 +24,13 @@ export default function NuevoCompleto(){
       if(e1) throw e1;
 
       const {data:pNew, error:e2} = await supabase.from('pacientes').insert({
-        nombre: pac.nombre, especie: pac.especie, raza: pac.raza,
-        edad: pac.edad? Number(pac.edad): null, sexo: pac.sexo,
-        esterilizado: pac.esterilizado, tutor_id: tNew.id
+        nombre: pac.nombre,
+        especie: pac.especie.toLowerCase(),
+        raza: pac.raza,
+        edad: pac.edad? Number(pac.edad): null,
+        sexo: pac.sexo === 'Hembra' ? 'H' : 'M',
+        esterilizado: pac.esterilizado,
+        tutor_id: tNew.id
       }).select('id').single();
       if(e2) throw e2;
 
@@ -35,7 +39,7 @@ export default function NuevoCompleto(){
         paciente_id: pNew.id, tutor_id: tNew.id, veterinario_id: vet?.id,
         motivo_consulta: 'Consulta', resena: 'Nuevo ingreso', tipo_ingreso: 'ingresado', estado: 'en_espera', fecha_hora: new Date().toISOString()
       });
-      router.push('/hoy?v=23');
+      router.push('/hoy?v=24');
     }catch(err:any){ setMsg(err.message); }
   }
 
