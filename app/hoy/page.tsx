@@ -10,6 +10,7 @@ const COLORES: any = {
   en_atencion: { label: 'En atención', color: '#2563eb', bg: '#dbeafe' },
   atendida: { label: 'Atendido', color: '#16a34a', bg: '#dcfce7' },
   agendado: { label: 'Agendado', color: '#6b7280', bg: '#f3f4f6' },
+  cancelada: { label: 'Cancelada', color: '#9ca3af', bg: '#f3f4f6' },
 };
 
 export default function Sala() {
@@ -44,7 +45,8 @@ export default function Sala() {
   }
 
   async function cambiar(id: string, nuevo: string) {
-    await supabase.from('agenda').update({ estado: nuevo }).eq('id', id); cargar();
+    await supabase.from('agenda').update({ estado: nuevo }).eq('id', id);
+    cargar();
   }
 
   return (
@@ -69,7 +71,6 @@ export default function Sala() {
               <div>
                 <div style={{ fontWeight: 800, fontSize: 15 }}>{c.pacientes?.nombre} - {c.pacientes?.especie}</div>
                 <div style={{ fontSize: 11, color: '#4b5563' }}>Tutor: {c.tutores?.nombre_completo}</div>
-                {/* RESEÑA REAL, NO "CONSULTA" */}
                 <div style={{ fontSize: 12, marginTop: 6, background: 'white', padding: '6px 8px', borderRadius: 8, border: '1px solid #e5e7eb' }}>
                   <b>Motivo:</b> {c.resena || c.motivo_consulta || 'Sin reseña'}
                 </div>
@@ -78,12 +79,27 @@ export default function Sala() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {c.estado === 'en_espera' && <button onClick={() => { cambiar(c.id, 'en_atencion'); router.push(`/pacientes/${c.paciente_id}`); }} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999, fontWeight: 700 }}>▶ Atender</button>}
                 {c.estado === 'ingresado' && <button onClick={() => cambiar(c.id, 'en_espera')} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999 }}>→ Espera</button>}
+                {c.estado === 'agendado' && <button onClick={() => cambiar(c.id, 'ingresado')} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999 }}>✓ Llegó</button>}
               </div>
             </div>
+
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
               <Link href={`/pacientes/${c.paciente_id}`} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12, textAlign: 'center', textDecoration: 'none', fontWeight: 700, color: 'black' }}>📋 Ficha</Link>
               <button onClick={() => router.push(`/ventas/${c.id}`)} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>💲 Cobrar</button>
               <button onClick={() => router.push(`/chat/${c.id}`)} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12 }}>💬 Médico</button>
+            </div>
+
+            {/* CAMBIO MANUAL QUE PEDISTE */}
+            <div style={{display:'flex',gap:6,marginTop:10, alignItems:'center'}}>
+              <span style={{fontSize:11, color:'#6b7280'}}>Cambiar manual:</span>
+              <select value={c.estado} onChange={e=>cambiar(c.id, e.target.value)} style={{flex:1,padding:8,borderRadius:999,border:'1px solid #e5e7eb',fontSize:12,background:'white'}}>
+                <option value="ingresado">Ingresado</option>
+                <option value="en_espera">En espera</option>
+                <option value="en_atencion">En atención</option>
+                <option value="atendida">Atendido</option>
+                <option value="agendado">Agendado</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
             </div>
           </div>
         );
