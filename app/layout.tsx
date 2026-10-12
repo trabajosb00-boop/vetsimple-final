@@ -1,10 +1,13 @@
-export const metadata = { title: 'VetSimple CRM', description: 'Agenda veterinaria' };
+import './globals.css'
+import ChatVet from './components/ChatVet' // <- 1. importa
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body style={{ margin: 0, fontFamily: 'system-ui, -apple-system, sans-serif', background: '#f6f7f9' }}>
+      <body>
         {children}
+        <ChatVet /> {/* <- 2. ponlo aquí al final, no tapa nada porque está cerrado por defecto */}
       </body>
     </html>
-  );
+  )
 }
