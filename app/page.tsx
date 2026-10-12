@@ -1,18 +1,34 @@
-'use client';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { supabase } from './supabase';
-export default function Inicio(){
-  const [rol,setRol]=useState('recepcion');
-  useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser(); if(!user) location.href='/login'; const {data:p}=await supabase.from('perfiles').select('rol').eq('id',user?.id).single(); setRol(p?.rol||'recepcion');})();},[]);
-  const cards=[
-    {href:'/hoy',label:'Sala Espera',icon:'🏥',roles:['admin','recepcion','medico']},
-    {href:'/medico',label:'Vista Médico',icon:'🩺',roles:['admin','medico']},
-    {href:'/pacientes/nuevo',label:'Nuevo Paciente',icon:'➕',roles:['admin','recepcion']},
-    {href:'/agenda',label:'Agenda',icon:'📅',roles:['admin','recepcion']},
-    {href:'/admin/usuarios',label:'Admin Usuarios',icon:'⚙️',roles:['admin']},
-  ];
-  return(<div style={{maxWidth:700,margin:'0 auto',padding:16,fontFamily:'system-ui'}}><h1 style={{fontWeight:800}}>Inicio - {rol}</h1><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:12}}>{cards.filter(c=>c.roles.includes(rol)).map(c=><Link key={c.href} href={c.href} style={{background:'white',border:'1px solid #e5e7eb',borderRadius:14,padding:20,textAlign:'center',textDecoration:'none',color:'black',fontWeight:700}}><div style={{fontSize:28}}>{c.icon}</div>{c.label}</Link>)}</div>
-  <div style={{position:'fixed',bottom:0,left:0,right:0,background:'white',borderTop:'1px solid #e5e7eb',display:'flex',justifyContent:'space-around',padding:'8px 0'}}><Link href="/">Inicio</Link><Link href="/hoy">Sala</Link><Link href="/medico">Médico</Link><Link href="/chat/0">Chat</Link></div>
-  </div>);
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function LoginPage() {
+  const [correo, setCorreo] = useState('')
+  const [clave, setClave] = useState('')
+  const [error, setError] = useState('')
+  const router = useRouter()
+
+  function entrar(e: any) {
+    e.preventDefault()
+    // ESTA ES TU CLAVE TEMPORAL FIJA
+    if (correo === 'admin@vetsimple.cl' && clave === 'admin123') {
+      localStorage.setItem('vetsimple_admin', 'true')
+      router.push('/hoy')
+    } else {
+      setError('Correo o clave incorrecta')
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 380, margin: '100px auto', padding: 20, fontFamily: 'system-ui' }}>
+      <h1 style={{ fontWeight: 800, textAlign: 'center', fontSize: 22 }}>VetSimple Login</h1>
+      <form onSubmit={entrar} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
+        <input placeholder="Correo" value={correo} onChange={e=>setCorreo(e.target.value)} style={{ padding: 12, borderRadius: 10, border: '1px solid #ddd' }} />
+        <input placeholder="Clave" type="password" value={clave} onChange={e=>setClave(e.target.value)} style={{ padding: 12, borderRadius: 10, border: '1px solid #ddd' }} />
+        <button type="submit" style={{ padding: 12, borderRadius: 10, background: '#111827', color: 'white', fontWeight: 700, border: 0 }}>Entrar</button>
+        {error && <div style={{ color: 'red', textAlign: 'center', fontSize: 14 }}>{error}</div>}
+      </form>
+      <div style={{ marginTop: 16, fontSize: 12, color: '#888', textAlign: 'center' }}>temporal: admin@vetsimple.cl / admin123</div>
+    </div>
+  )
 }
