@@ -1,154 +1,37 @@
-'use client';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../supabase';
+'use client'
+import { useEffect, useState } from 'react'
+import { supabase } from '../supabase'
 
-const COLORES: any = {
-  ingresado: { label: 'Ingresado', color: '#f59e0b', bg: '#fef3c7' },
-  en_espera: { label: 'En espera', color: '#dc2626', bg: '#fee2e2' },
-  en_atencion: { label: 'En atención', color: '#2563eb', bg: '#dbeafe' },
-  atendida: { label: 'Atendido', color: '#16a34a', bg: '#dcfce7' },
-  agendado: { label: 'Agendado', color: '#6b7280', bg: '#f3f4f6' },
-  cancelada: { label: 'Cancelada', color: '#9ca3af', bg: '#f3f4f6' },
-};
-
-export default function Sala() {
-  const [citas, setCitas] = useState<any[]>([]);
-  const [q, setQ] = useState('');
-  const [resultPac, setResultPac] = useState<any[]>([]);
-  const [resultTut, setResultTut] = useState<any[]>([]);
-  const [tutorMascotas, setTutorMascotas] = useState<any>({});
-  const [vets, setVets] = useState<any[]>([]);
-  const [medSel, setMedSel] = useState('');
-  const router = useRouter();
-
-  async function cargar() {
-    const { data } = await supabase.from('agenda').select('*, pacientes(id, nombre, especie), tutores(nombre_completo), veterinarios(nombre_completo)').order('fecha_hora', { ascending: false }).limit(30);
-    setCitas((data || []).filter(c => c.estado!== 'atendida' && c.estado!== 'cancelada'));
-    const { data: v } = await supabase.from('veterinarios').select('*'); setVets(v || []);
+export default function HoyPage(){
+  const [citas,setCitas]=useState<any[]>([])
+  const [q,setQ]=useState('')
+  
+  async function cargar(){
+    const {data}=await supabase.from('agenda').select('*, pacientes(nombre,especie), tutores(nombre_completo,telefono_whatsapp)').eq('estado','en_espera').order('fecha_hora',{ascending:true})
+    setCitas(data||[])
   }
-  useEffect(() => { cargar(); }, []);
+  useEffect(()=>{cargar()},[])
 
-  async function buscar(texto: string) {
-    setQ(texto);
-    if (texto.length < 2) { setResultPac([]); setResultTut([]); return; }
-    const { data: pac } = await supabase.from('pacientes').select('*, tutores(nombre_completo)').ilike('nombre', `%${texto}%`).limit(5);
-    setResultPac(pac || []);
-    const { data: tut } = await supabase.from('tutores').select('*').or(`nombre_completo.ilike.%${texto}%,rut.ilike.%${texto}%,telefono.ilike.%${texto}%`).limit(5);
-    setResultTut(tut || []);
-    if (tut) {
-      for (const t of tut) {
-        const { data: ms } = await supabase.from('pacientes').select('id,nombre,especie').eq('tutor_id', t.id);
-        setTutorMascotas((prev:any)=>({...prev,[t.id]:ms||[]}));
-      }
-    }
-  }
+  const filtradas = citas.filter(c=> 
+    c.pacientes?.nombre?.toLowerCase().includes(q.toLowerCase()) || 
+    c.tutores?.nombre_completo?.toLowerCase().includes(q.toLowerCase())
+  )
 
-  async function agregar(p: any) {
-    const resena = prompt(`¿Por qué viene ${p.nombre}? Ej: Vómitos desde ayer, decaído`);
-    if (!resena) return;
-    await supabase.from('agenda').insert({
-      paciente_id: p.id, tutor_id: p.tutor_id, veterinario_id: medSel || null,
-      motivo_consulta: 'Consulta', resena: resena, tipo_ingreso: 'ingresado', estado: 'en_espera', fecha_hora: new Date().toISOString()
-    });
-    setQ(''); setResultPac([]); setResultTut([]); cargar();
-  }
-
-  async function agregarDesdeTutor(paciente: any, tutorId: string) {
-    const resena = prompt(`Motivo para ${paciente.nombre}?`);
-    if (!resena) return;
-    await supabase.from('agenda').insert({
-      paciente_id: paciente.id, tutor_id: tutorId, veterinario_id: medSel || null,
-      resena, estado:'en_espera', fecha_hora:new Date().toISOString(), tipo_ingreso:'ingresado', motivo_consulta:'Consulta'
-    });
-    setQ(''); setResultPac([]); setResultTut([]); cargar();
-  }
-
-  async function cambiar(id: string, nuevo: string) {
-    await supabase.from('agenda').update({ estado: nuevo }).eq('id', id);
-    cargar();
-  }
-
-  return (
-    <div style={{ maxWidth: 700, margin: '0 auto', padding: 16, fontFamily: 'system-ui' }}>
-      <h1 style={{ fontWeight: 800, fontSize: 20 }}>Sala de Espera</h1>
-
-      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 14, padding: 10, marginTop: 12 }}>
-        <input value={q} onChange={e => buscar(e.target.value)} placeholder="🔍 Buscar paciente o tutor (RUT/teléfono) para ingresar..." style={{ width: '100%', padding: 12, borderRadius: 10, border: '1px solid #e5e7eb' }} />
-        <div style={{display:'flex',gap:6,marginTop:8}}>
-          <select value={medSel} onChange={e=>setMedSel(e.target.value)} style={{flex:1,padding:10,borderRadius:10,border:'1px solid #e5e7eb',background:'white'}}>
-            <option value="">Médico opcional - queda en blanco</option>
-            {vets.map((v:any)=><option key={v.id} value={v.id}>🩺 {v.nombre_completo}</option>)}
-          </select>
-        </div>
-
-        {resultPac.map(p => (
-          <div key={p.id} onClick={() => agregar(p)} style={{ padding: 12, borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}>
-            <b>{p.nombre}</b> - {p.tutores?.nombre_completo} → <span style={{ color: '#2563eb' }}>Ingresar a sala</span>
-          </div>
-        ))}
-
-        {resultTut.map(t => (
-          <div key={t.id} style={{ padding: 12, borderBottom: '1px solid #e5e7eb', background:'#f9fafb', borderRadius:10, marginTop:8 }}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <div>
-                <b>👤 {t.nombre_completo}</b> <span style={{fontSize:11,color:'#6b7280'}}>{t.rut} • {t.telefono}</span>
-                <div style={{fontSize:11,color:'#4b5563'}}>{(tutorMascotas[t.id]||[]).length} mascotas</div>
-              </div>
-              <Link href={`/tutores/${t.id}`} style={{background:'#16a34a',color:'white',padding:'8px 12px',borderRadius:999,textDecoration:'none',fontWeight:700,fontSize:12}}>＋ Mascota</Link>
-            </div>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:8}}>
-              {(tutorMascotas[t.id]||[]).map((m:any)=>(
-                <button key={m.id} onClick={()=>agregarDesdeTutor(m,t.id)} style={{background:'white',border:'1px solid #e5e7eb',padding:'6px 10px',borderRadius:999,fontSize:12}}>
-                  {m.nombre} • {m.especie} → Sala
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        <Link href="/pacientes/nuevo" style={{ display: 'block', marginTop: 10, background: '#111827', color: 'white', textAlign: 'center', padding: 10, borderRadius: 10, textDecoration: 'none', fontWeight: 700 }}>+ Nuevo paciente/tutor</Link>
+  return(
+    <div style={{padding:16,fontFamily:'system-ui',background:'#f6f7f9',minHeight:'100vh'}}>
+      <h1 style={{fontWeight:800}}>Sala de Espera</h1>
+      <div style={{background:'white',padding:12,borderRadius:12,border:'1px solid #e5e7eb',marginTop:10}}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 Buscar paciente o tutor (RUT/teléfono) para ingresar..." style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #ddd'}}/>
+        <div style={{marginTop:10,padding:10,borderRadius:8,border:'1px solid #ddd',color:'#888',fontSize:14}}>Médico opcional - queda en blanco</div>
+        <button style={{width:'100%',marginTop:10,padding:12,borderRadius:10,background:'#111',color:'white',fontWeight:700}}>+ Nuevo paciente/tutor</button>
       </div>
-
-      {citas.map(c => {
-        const cfg = COLORES[c.estado] || COLORES.ingresado;
-        return (
-          <div key={c.id} style={{ background: cfg.bg, borderLeft: `6px solid ${cfg.color}`, border: '1px solid #e5e7eb', borderRadius: 14, padding: 12, marginTop: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 15 }}>{c.pacientes?.nombre} - {c.pacientes?.especie}</div>
-                <div style={{ fontSize: 11, color: '#4b5563' }}>Tutor: {c.tutores?.nombre_completo}</div>
-                <div style={{ fontSize: 12, marginTop: 6, background: 'white', padding: '6px 8px', borderRadius: 8, border: '1px solid #e5e7eb' }}>
-                  <b>Motivo:</b> {c.resena || c.motivo_consulta || 'Sin reseña'}
-                </div>
-                <div style={{ fontSize: 11, marginTop: 6 }}>🩺 {c.veterinarios?.nombre_completo || 'Sin médico'} • {cfg.label}</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {c.estado === 'en_espera' && <button onClick={() => { cambiar(c.id, 'en_atencion'); router.push(`/pacientes/${c.paciente_id}?medico=${c.veterinario_id||''}`); }} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999, fontWeight: 700 }}>▶ Atender</button>}
-                {c.estado === 'ingresado' && <button onClick={() => cambiar(c.id, 'en_espera')} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999 }}>→ Espera</button>}
-                {c.estado === 'agendado' && <button onClick={() => cambiar(c.id, 'ingresado')} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999 }}>✓ Llegó</button>}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-              <Link href={`/pacientes/${c.paciente_id}`} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12, textAlign: 'center', textDecoration: 'none', fontWeight: 700, color: 'black' }}>📋 Ficha</Link>
-              <button onClick={() => router.push(`/ventas/${c.id}`)} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>💲 Cobrar</button>
-              <button onClick={() => router.push(`/chat/${c.id}`)} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12 }}>💬 Médico</button>
-            </div>
-            <div style={{display:'flex',gap:6,marginTop:10, alignItems:'center'}}>
-              <span style={{fontSize:11, color:'#6b7280'}}>Manual:</span>
-              <select value={c.estado} onChange={e=>cambiar(c.id, e.target.value)} style={{flex:1,padding:8,borderRadius:999,border:'1px solid #e5e7eb',fontSize:12,background:'white'}}>
-                <option value="ingresado">Ingresado</option>
-                <option value="en_espera">En espera</option>
-                <option value="en_atencion">En atención</option>
-                <option value="atendida">Atendido</option>
-                <option value="agendado">Agendado</option>
-                <option value="cancelada">Cancelada</option>
-              </select>
-            </div>
-          </div>
-        );
-      })}
+      {filtradas.map(c=>(
+        <div key={c.id} style={{background:'white',padding:14,borderRadius:12,marginTop:12,border:'1px solid #e5e7eb'}}>
+          <b>{c.pacientes?.nombre}</b> - {c.tutores?.nombre_completo}
+          <div style={{fontSize:12,color:'#666'}}>{c.tutores?.telefono_whatsapp} • {c.motivo}</div>
+        </div>
+      ))}
+      {filtradas.length===0 && <p style={{textAlign:'center',color:'#888',marginTop:20}}>No hay pacientes en espera</p>}
     </div>
-  );
+  )
 }
