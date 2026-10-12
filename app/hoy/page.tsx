@@ -1,73 +1,93 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../supabase';
 
-const ESTADOS: any = {
-  recepcion: { label: 'Recepción', color: '#111827', next: 'en_espera' },
-  agendada: { label: 'Recepción', color: '#111827', next: 'en_espera' },
-  en_espera: { label: 'En espera', color: '#ef4444', next: 'en_atencion' },
-  en_atencion: { label: 'En atención', color: '#2563eb', next: 'atendida' },
-  atendida: { label: 'Atendido', color: '#16a34a', next: null },
-  cancelada: { label: 'Cancelada', color: '#6b7280', next: null },
+const COLORES: any = {
+  ingresado: { label: 'Ingresado', color: '#f59e0b', bg: '#fef3c7' },
+  en_espera: { label: 'En espera', color: '#dc2626', bg: '#fee2e2' },
+  en_atencion: { label: 'En atención', color: '#2563eb', bg: '#dbeafe' },
+  atendida: { label: 'Atendido', color: '#16a34a', bg: '#dcfce7' },
+  agendado: { label: 'Agendado', color: '#6b7280', bg: '#f3f4f6' },
 };
 
-export default function SalaEspera() {
+export default function Sala() {
   const [citas, setCitas] = useState<any[]>([]);
-  const [filtro, setFiltro] = useState('');
-  const [pacientes, setPacientes] = useState<any[]>([]);
+  const [q, setQ] = useState('');
+  const [result, setResult] = useState<any[]>([]);
+  const [vets, setVets] = useState<any[]>([]);
+  const router = useRouter();
 
   async function cargar() {
-    const { data } = await supabase.from('agenda').select('*, pacientes(nombre, especie), tutores(nombre_completo), veterinarios(nombre_completo)').order('fecha_hora', { ascending: true });
-    setCitas(data || []);
-    const { data: p } = await supabase.from('pacientes').select('*, tutores(nombre_completo)').limit(20);
-    setPacientes(p || []);
+    const { data } = await supabase.from('agenda').select('*, pacientes(id, nombre, especie), tutores(nombre_completo), veterinarios(nombre_completo)').order('fecha_hora', { ascending: false }).limit(30);
+    setCitas((data || []).filter(c => c.estado!== 'atendida' && c.estado!== 'cancelada'));
+    const { data: v } = await supabase.from('veterinarios').select('*'); setVets(v || []);
   }
   useEffect(() => { cargar(); }, []);
 
-  const filtradas = citas.filter(c =>
-    (c.pacientes?.nombre?.toLowerCase().includes(filtro.toLowerCase()) ||
-     c.tutores?.nombre_completo?.toLowerCase().includes(filtro.toLowerCase())) &&
-    c.estado!== 'cancelada'
-  );
+  async function buscar(texto: string) {
+    setQ(texto);
+    if (texto.length < 2) { setResult([]); return; }
+    const { data } = await supabase.from('pacientes').select('*, tutores(nombre_completo)').ilike('nombre', `%${texto}%`).limit(5);
+    setResult(data || []);
+  }
+
+  async function agregar(p: any) {
+    const resena = prompt(`¿Por qué viene ${p.nombre}? Ej: Vómitos desde ayer, decaído, no come`);
+    if (!resena) return;
+    await supabase.from('agenda').insert({
+      paciente_id: p.id, tutor_id: p.tutor_id, veterinario_id: vets[0]?.id,
+      motivo_consulta: 'Consulta', resena: resena, tipo_ingreso: 'ingresado', estado: 'en_espera', fecha_hora: new Date().toISOString()
+    });
+    setQ(''); setResult([]); cargar();
+  }
 
   async function cambiar(id: string, nuevo: string) {
-    await supabase.from('agenda').update({ estado: nuevo }).eq('id', id);
-    cargar();
+    await supabase.from('agenda').update({ estado: nuevo }).eq('id', id); cargar();
   }
 
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', padding: 16, fontFamily: 'system-ui' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800 }}>Sala de Espera</h1>
+      <h1 style={{ fontWeight: 800, fontSize: 20 }}>Sala de Espera</h1>
 
-      {/* BUSCADOR QUE PEDISTE */}
-      <div style={{ background: 'white', padding: 12, borderRadius: 14, border: '1px solid #e5e7eb', marginTop: 12, display: 'flex', gap: 8 }}>
-        <input value={filtro} onChange={e => setFiltro(e.target.value)} placeholder="🔍 Buscar paciente o tutor para agregar a sala..." style={{ flex: 1, padding: 12, borderRadius: 10, border: '1px solid #e5e7eb' }} />
-        <Link href="/pacientes/nuevo" style={{ background: '#111827', color: 'white', padding: '12px 16px', borderRadius: 10, textDecoration: 'none', fontWeight: 700 }}>+ Nuevo</Link>
+      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 14, padding: 10, marginTop: 12 }}>
+        <input value={q} onChange={e => buscar(e.target.value)} placeholder="🔍 Buscar paciente para ingresar a sala..." style={{ width: '100%', padding: 12, borderRadius: 10, border: '1px solid #e5e7eb' }} />
+        {result.map(p => (
+          <div key={p.id} onClick={() => agregar(p)} style={{ padding: 12, borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}>
+            <b>{p.nombre}</b> - {p.tutores?.nombre_completo} → <span style={{ color: '#2563eb' }}>Ingresar a sala</span>
+          </div>
+        ))}
+        <Link href="/pacientes/nuevo" style={{ display: 'block', marginTop: 8, background: '#111827', color: 'white', textAlign: 'center', padding: 10, borderRadius: 10, textDecoration: 'none', fontWeight: 700 }}>+ Nuevo paciente/tutor</Link>
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        {filtradas.map(c => {
-          const cfg = ESTADOS[c.estado] || ESTADOS.recepcion;
-          return (
-            <div key={c.id} style={{ background: 'white', borderLeft: `6px solid ${cfg.color}`, padding: 14, borderRadius: 14, border: '1px solid #e5e7eb', marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <Link href={`/pacientes/${c.paciente_id}`} style={{ fontWeight: 800, color: 'black', fontSize: 16 }}>{c.pacientes?.nombre} - {c.pacientes?.especie}</Link>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>Tutor: {c.tutores?.nombre_completo} • {c.motivo_consulta || c.tipo_cita || 'Sin motivo'}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4 }}>🩺 {c.veterinarios?.nombre_completo || 'Sin médico'} • {cfg.label}</div>
+      {citas.map(c => {
+        const cfg = COLORES[c.estado] || COLORES.ingresado;
+        return (
+          <div key={c.id} style={{ background: cfg.bg, borderLeft: `6px solid ${cfg.color}`, border: '1px solid #e5e7eb', borderRadius: 14, padding: 12, marginTop: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>{c.pacientes?.nombre} - {c.pacientes?.especie}</div>
+                <div style={{ fontSize: 11, color: '#4b5563' }}>Tutor: {c.tutores?.nombre_completo}</div>
+                {/* RESEÑA REAL, NO "CONSULTA" */}
+                <div style={{ fontSize: 12, marginTop: 6, background: 'white', padding: '6px 8px', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                  <b>Motivo:</b> {c.resena || c.motivo_consulta || 'Sin reseña'}
                 </div>
-                {cfg.next && <button onClick={() => cambiar(c.id, cfg.next)} style={{ background: cfg.color, color: 'white', padding: '10px 14px', borderRadius: 999, border: 0, fontWeight: 700, height: 40 }}>{cfg.label}</button>}
+                <div style={{ fontSize: 11, marginTop: 6 }}>🩺 {c.veterinarios?.nombre_completo || 'Sin médico'} • {cfg.label}</div>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <Link href={`/pacientes/${c.paciente_id}?medico=${c.veterinario_id}`} style={{ background: '#eff6ff', border: '1px solid #dbeafe', padding: '8px 12px', borderRadius: 999, fontSize: 12, textDecoration: 'none', fontWeight: 700 }}>📋 Ficha</Link>
-                <Link href={`/ventas/${c.id}`} style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '8px 12px', borderRadius: 999, fontSize: 12, textDecoration: 'none', fontWeight: 700 }}>💲 Cobrar</Link>
-                <Link href={`/chat/${c.id}`} style={{ background: '#faf5ff', border: '1px solid #e9d5ff', padding: '8px 12px', borderRadius: 999, fontSize: 12, textDecoration: 'none' }}>💬 Médico</Link>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {c.estado === 'en_espera' && <button onClick={() => { cambiar(c.id, 'en_atencion'); router.push(`/pacientes/${c.paciente_id}`); }} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999, fontWeight: 700 }}>▶ Atender</button>}
+                {c.estado === 'ingresado' && <button onClick={() => cambiar(c.id, 'en_espera')} style={{ background: cfg.color, color: 'white', border: 0, padding: '8px 12px', borderRadius: 999 }}>→ Espera</button>}
               </div>
             </div>
-          );
-        })}
-      </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <Link href={`/pacientes/${c.paciente_id}`} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12, textAlign: 'center', textDecoration: 'none', fontWeight: 700, color: 'black' }}>📋 Ficha</Link>
+              <button onClick={() => router.push(`/ventas/${c.id}`)} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>💲 Cobrar</button>
+              <button onClick={() => router.push(`/chat/${c.id}`)} style={{ flex: 1, background: 'white', border: '1px solid #e5e7eb', padding: '10px', borderRadius: 999, fontSize: 12 }}>💬 Médico</button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
