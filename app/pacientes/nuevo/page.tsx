@@ -13,9 +13,13 @@ export default function NuevoCompleto(){
     setMsg('Guardando...');
     try{
       const {data:tNew, error:e1} = await supabase.from('tutores').insert({
-        nombre_completo: tutor.nombre_completo, rut: tutor.rut,
-        telefono: tutor.telefono, telefono2: tutor.telefono2,
-        email: tutor.email, direccion: tutor.direccion
+        nombre_completo: tutor.nombre_completo,
+        rut: tutor.rut,
+        telefono: tutor.telefono,
+        telefono_whatsapp: tutor.telefono,
+        telefono2: tutor.telefono2,
+        email: tutor.email,
+        direccion: tutor.direccion
       }).select('id').single();
       if(e1) throw e1;
 
@@ -31,7 +35,7 @@ export default function NuevoCompleto(){
         paciente_id: pNew.id, tutor_id: tNew.id, veterinario_id: vet?.id,
         motivo_consulta: 'Consulta', resena: 'Nuevo ingreso', tipo_ingreso: 'ingresado', estado: 'en_espera', fecha_hora: new Date().toISOString()
       });
-      router.push('/hoy?v=22');
+      router.push('/hoy?v=23');
     }catch(err:any){ setMsg(err.message); }
   }
 
@@ -39,8 +43,7 @@ export default function NuevoCompleto(){
     <div style={{maxWidth:520,margin:'0 auto',padding:16,fontFamily:'system-ui'}}>
       <h1 style={{fontWeight:800}}>+ Nuevo tutor y paciente</h1>
       <div style={{background:'white',padding:14,borderRadius:14,border:'1px solid #e5e7eb',marginTop:12}}>
-        <b>Tutor</b>
-        <input value={tutor.nombre_completo} onChange={e=>setTutor({...tutor,nombre_completo:e.target.value})} placeholder="Nombre completo" style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e5e7eb',marginTop:6}}/>
+        <input value={tutor.nombre_completo} onChange={e=>setTutor({...tutor,nombre_completo:e.target.value})} placeholder="Nombre tutor" style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e5e7eb',marginTop:6}}/>
         <input value={tutor.rut} onChange={e=>setTutor({...tutor,rut:e.target.value})} placeholder="RUT" style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e5e7eb',marginTop:6}}/>
         <div style={{display:'flex',gap:6,marginTop:6}}>
           <input value={tutor.telefono} onChange={e=>setTutor({...tutor,telefono:e.target.value})} placeholder="Teléfono 1" style={{flex:1,padding:10,borderRadius:8,border:'1px solid #e5e7eb'}}/>
@@ -48,8 +51,7 @@ export default function NuevoCompleto(){
         </div>
         <input value={tutor.email} onChange={e=>setTutor({...tutor,email:e.target.value})} placeholder="Correo" style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e5e7eb',marginTop:6}}/>
         <input value={tutor.direccion} onChange={e=>setTutor({...tutor,direccion:e.target.value})} placeholder="Dirección" style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e5e7eb',marginTop:6}}/>
-        <b style={{display:'block',marginTop:14}}>Paciente</b>
-        <input value={pac.nombre} onChange={e=>setPac({...pac,nombre:e.target.value})} placeholder="Nombre paciente" style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e5e7eb',marginTop:6}}/>
+        <input value={pac.nombre} onChange={e=>setPac({...pac,nombre:e.target.value})} placeholder="Nombre paciente" style={{width:'100%',padding:10,borderRadius:8,border:'1px solid #e5e7eb',marginTop:12}}/>
         <div style={{display:'flex',gap:6,marginTop:6}}>
           <select value={pac.especie} onChange={e=>setPac({...pac,especie:e.target.value})} style={{flex:1,padding:10,borderRadius:8,border:'1px solid #e5e7eb'}}><option>canino</option><option>felino</option><option>otro</option></select>
           <input value={pac.raza} onChange={e=>setPac({...pac,raza:e.target.value})} placeholder="Raza" style={{flex:1,padding:10,borderRadius:8,border:'1px solid #e5e7eb'}}/>
@@ -60,7 +62,7 @@ export default function NuevoCompleto(){
         </div>
         <label style={{display:'flex',gap:6,marginTop:8,fontSize:13}}><input type="checkbox" checked={pac.esterilizado} onChange={e=>setPac({...pac,esterilizado:e.target.checked})}/> Esterilizado</label>
         <button onClick={guardar} style={{width:'100%',marginTop:12,background:'#111827',color:'white',padding:12,borderRadius:10,fontWeight:800,border:0}}>Guardar y llevar a sala</button>
-        <div style={{fontSize:11,color:'#dc2626',marginTop:8,whiteSpace:'pre-wrap'}}>{msg}</div>
+        <div style={{fontSize:11,color:'#dc2626',marginTop:8}}>{msg}</div>
       </div>
     </div>
   );
